@@ -771,6 +771,22 @@ _settings_map_set_enum (const GValue * value,
   return NULL;
 }
 
+static gboolean
+_start_streaming (gpointer user_data)
+{
+  GaeulAgent *self = user_data;
+
+  self->resolution = GAEGULI_VIDEO_RESOLUTION_640X480;
+  self->fps = 30;
+  self->bitrates = 10000000;
+  _get_srt_uri (self);
+
+  gaeul_agent_start_pipeline (self);
+  self->is_playing = TRUE;
+
+  return G_SOURCE_REMOVE;
+}
+
 static void
 gaeul_agent_init (GaeulAgent * self)
 {
@@ -804,23 +820,25 @@ gaeul_agent_init (GaeulAgent * self)
       g_enum_get_value (g_type_class_peek (GAEGULI_TYPE_ENCODING_METHOD),
           self->encoding_method)->value_nick);
 
-  self->edge = chamge_edge_new (self->edge_id);
+  //self->edge = chamge_edge_new (self->edge_id);
   self->edge_prev_state = CHAMGE_NODE_STATE_NULL;
   self->pipeline = gaeguli_pipeline_new_full (self->video_source,
       self->video_device, self->encoding_method);
 
-  self->edge_state_changed_id =
+  /*self->edge_state_changed_id =
       g_signal_connect (self->edge, "state-changed",
       G_CALLBACK (_edge_state_changed_cb), self);
   self->edge_user_command_id =
       g_signal_connect (self->edge, "user-command",
-      G_CALLBACK (_edge_user_command_cb), self);
+      G_CALLBACK (_edge_user_command_cb), self);*/
 
   self->pipeline_stopped_id =
       g_signal_connect (self->pipeline, "stream-stopped",
       (GCallback) stream_stopped_cb, self);
 
   self->transmit = gaeguli_fifo_transmit_new ();
+
+  g_timeout_add_seconds (1, _start_streaming, self);
 }
 
 static int
